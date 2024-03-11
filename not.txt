@@ -1,0 +1,169 @@
+# Docker
+
+build -> docker build -t forinca/<image-name>:<version> . 
+
+# Kubernetes
+
+kubectl -> kubectl apply -f posts.yaml
+get -> kubectl get pods
+delete -> kubectl delete pod posts 
+log -> kubectl posts logs
+describe -> kubectl desribe pod posts 
+
+# kubectl get deployments
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE
+posts-depl   1/1     1            1           2m5s
+
+
+# kubectl describe deployment posts-depl
+# kubectl delete deployment posts-depl
+# kubectl logs posts-depl-57cfb89788-zrk5t
+
+
+
+Örnek yaml
+## Not : posts.yaml.old 
+apiVersion: v1 # Kubernetes API versiyonunu belirttik
+kind: Pod # Pod türünde bir obje oluşturacağımızı belirttik
+metadata: # Pod'un meta verilerini belirttik
+  name: posts # Pod'un adını belirttik
+spec: # Pod'un özelliklerini belirttik
+  containers: # Pod içerisindeki container'ları belirttik
+    - name: posts # Container'ın adını belirttik
+      image: forinca/posts:0.0.1 # Container'ın hangi image'dan oluşturulacağını belirttik
+
+
+
+# posts-depl.yaml yeni 
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: posts-depl
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: posts
+  template:
+    metadata:
+      labels:
+        app: posts
+    spec:
+      containers:
+        - name: posts
+          image: forinca/posts:0.0.1
+
+
+
+
+
+
+
+
+# Var olan docker images üzerinde tekrar build alıp update işlemi gerçekleştirmek için
+
+docker build -t forinca30/posts .
+docker push forinca30/posts
+kubectl rollout restart deployment posts-depl
+
+
+böylece docker hub tarafından pull alacak kubernetes otomatik güncel image ayağa kaldıracak.
+
+
+
+
+
+
+# Types of services
+
+cluster ip 
+node port  -> container çalıştığı port 
+load balancer -> replicas sayısına göre kubernetes cluster ipsi üzerinden yönlendirme yapılacaktır.
+external name 
+
+
+
+
+# posts-srv.yaml -> html
+
+ kubectl apply -f posts-srv.yaml 
+service/posts-srv created
+c.akar@PC-ARGE-12 k8s % kubectl get pods
+NAME                          READY   STATUS    RESTARTS   AGE
+posts-depl-669f96d6c7-prbjh   1/1     Running   0          15m
+c.akar@PC-ARGE-12 k8s % kubectl get deployments
+NAME         READY   UP-TO-DATE   AVAILABLE   AGE
+posts-depl   1/1     1            1           28m
+c.akar@PC-ARGE-12 k8s % kubectl get services
+NAME         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP          41h
+posts-srv    NodePort    10.98.153.174   <none>        4000:30532/TCP   19s
+
+
+istekler cluster-ip 4000 port gelirse target olan pod portuna load balancer edecektir.
+
+
+
+# kubectl describe service posts-srv
+
+Name:                     posts-srv
+Namespace:                default
+Labels:                   <none>
+Annotations:              <none>
+Selector:                 app=posts
+Type:                     NodePort
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.98.153.174
+IPs:                      10.98.153.174
+Port:                     posts  4000/TCP
+TargetPort:               4000/TCP
+NodePort:                 posts  30532/TCP
+Endpoints:                10.1.0.50:4000
+Session Affinity:         None
+External Traffic Policy:  Cluster
+Events:                   <none>
+
+
+
+
+
+#Cloud provider 
+1- Load balancer (NAT)
+2- Ingress-nginx 
+
+
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.0/deploy/static/provider/cloud/deploy.yaml
+kubectl get ingress
+
+
+# sudo lsof -i tcp:80
+
+
+# yerel makineye bunu tanıtmak için 
+# etc/hosts yapılandırma eklenmesi gerekmektedir.
+
+
+
+#Böylece ingress contoller tarafından nginx router
+yönlendirmesini yönetecektir ilgili cluster ip'ye göre servislere
+böylece load balancer da replicas sayılarına göre düzgün çalışacaktır.
+
+
+# Artık deploy çıkarken modul image oluştur 
+docker push 
+kubectl rollout restart yapılandırmasına gerek kalmadan 
+yönetimini otomatik olarak sağlayacağız.
+
+
+
+# Introducing skaffold (Bizim için otomatik deploy yönetecektir.)
+
+# skaffold kurmak için homebrew ihtiyacımız Var
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+
+# projenin ana dizini üzerinde skaffold.yaml dosyası 
+belirttik buna göre skaffold dev çalıştırarak kubernetes tarafında ki
+limanların yönetimini yapacaktır. 
+
